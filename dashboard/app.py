@@ -70,17 +70,22 @@ def api_stats():
 def api_sensors():
     return jsonify(SENSORS)
 
+tasks_started = False
+
 @socketio.on('connect')
 def on_connect():
+    global tasks_started
+    if not tasks_started:
+        socketio.start_background_task(sensor_task)
+        socketio.start_background_task(processor_task)
+        tasks_started = True
+
     print("[DASHBOARD] Client connected")
     emit('stats_update', get_stats())
     for ev in get_recent_events(20):
         emit('earthquake_event', ev)
 
 # ── Start ─────────────────────────────────────────────────────────────────────
-
-socketio.start_background_task(sensor_task)
-socketio.start_background_task(processor_task)
 
 if __name__ == '__main__':
     port = int(os.getenv('DASHBOARD_PORT', 5000))
